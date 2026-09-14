@@ -53,6 +53,7 @@ def post_page(request: Request, post_id: int, db: Annotated[Session, Depends(get
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="post not found")
 
 
+# Web GET - Render the page displaying all posts by a specific user
 @app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts_page")
 def user_posts_page(request: Request, user_id: int, db: Annotated[Session, Depends(get_db)]):
     result = db.execute(select(models.User).where(models.User.id == user_id))
@@ -65,7 +66,7 @@ def user_posts_page(request: Request, user_id: int, db: Annotated[Session, Depen
     return templates.TemplateResponse(
         request,
         "user_post.html",
-        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"}
+        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
     )
 
 
@@ -92,6 +93,7 @@ def get_post(post_id: int, db: Annotated[Session, Depends(get_db)]):
     return post
 
 
+# API GET - Retrieve a single user by ID
 @app.get("/api/users/{user_id}", response_model=UserResponse)
 def get_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
     result = db.execute(select(models.User).where(models.User.id == user_id))
@@ -103,6 +105,7 @@ def get_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
 
 
+# API GET - Retrieve all posts by a specific user
 @app.get("/api/posts/users/{user_id}/posts", response_model=list[PostResponse])
 def get_user_post(user_id: int, db: Annotated[Session, Depends(get_db)]):
     result = db.execute(select(models.User).where(models.User.id == user_id))
@@ -153,11 +156,11 @@ def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
     return new_user
 
 
-# API POST - Create a new post
+# API POST - Create a new post in the database
 @app.post(
     "/api/posts",
     response_model=PostCreate,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
 )
 def create_post(post: PostCreate, db: Annotated[Session, Depends(get_db)]):
     result = db.execute(select(models.User).where(models.User.id == post.user_id))
@@ -223,5 +226,5 @@ def validation_exception_handler(request: Request, exception: RequestValidationE
             "title": status.HTTP_422_UNPROCESSABLE_CONTENT,
             "message": "Invalid Request. Please check your request and try again.",
         },
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
