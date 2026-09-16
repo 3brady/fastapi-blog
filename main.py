@@ -8,13 +8,15 @@ from fastapi.exception_handlers import http_exception_handler, request_validatio
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
 from database import Base, engine, get_db
-from routers import users , posts
+from routers import users, posts
+from config import settings
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -32,28 +34,38 @@ app.mount("/media", StaticFiles(directory="media"), name="media")
 
 templates = Jinja2Templates(directory="templates")
 
-app.include_router(users.router, prefix="/api/users" , tags=["users"] )
-app.include_router(posts.router, prefix="/api/posts" , tags=["posts"] )
+app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 
 
-# ==============================================================================
-# Non-API Endpoints (Web / HTML)
-# ==============================================================================
-
-# Web GET - Render the home page displaying all posts
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc()))
+    count_result = await db.execute(select(func.count()).select_from(models.Post))
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .order_by(models.Post.date_posted.desc())
+        .limit(settings.posts_per_page),
+    )
     posts = result.scalars().all()
+
+    has_more = len(posts) < total
+
     return templates.TemplateResponse(
         request,
         "home.html",
-        {"posts": posts, "title": "Home"},
+        {
+            "posts": posts,
+            "title": "Home",
+            "limit": settings.posts_per_page,
+            "has_more": has_more,
+        },
     )
 
 
-# Web GET - Render a single post details page by post ID
 @app.get("/post/{post_id}", include_in_schema=False)
 async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
@@ -70,53 +82,78 @@ async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="post not found")
 
 
-# Web GET - Render the page displaying all posts by a specific user
-@app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts_page")
-async def user_posts_page(request: Request, user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+@app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts")
+async def user_posts_page(
+        request: Request,
+        user_id: int,
+        db: Annotated[AsyncSession, Depends(get_db)],
+):
     result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(models.Post)
+        .where(models.Post.user_id == user_id),
+    )
+    total = count_result.scalar() or 0
 
     result = await db.execute(
-        select(models.Post).options(selectinload(models.Post.author)).where(models.Post.user_id == user_id).order_by(models.Post.date_posted.desc()))
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
+        .limit(settings.posts_per_page),
+    )
     posts = result.scalars().all()
+
+    has_more = len(posts) < total
+
     return templates.TemplateResponse(
         request,
-        "user_post.html",
-        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
+        "user_posts.html",
+        {
+            "posts": posts,
+            "user": user,
+            "title": f"{user.username}'s Posts",
+            "limit": settings.posts_per_page,
+            "has_more": has_more,
+        },
     )
 
 
-@app.get("/login" , include_in_schema=False)
-async def login_page(request : Request):
+@app.get("/login", include_in_schema=False)
+async def login_page(request: Request):
     return templates.TemplateResponse(
-        request ,
+        request,
         "login.html",
-        {"title" : "login"}
+        {"title": "login"}
     )
 
-@app.get("/register" , include_in_schema=False)
-async def register_page(request : Request) :
+
+@app.get("/register", include_in_schema=False)
+async def register_page(request: Request):
     return templates.TemplateResponse(
-        request ,
+        request,
         "register.html",
-        {"title" : "register"}
+        {"title": "register"}
     )
 
-@app.get("/account" , include_in_schema=False)
-async def account_page(request : Request):
+
+@app.get("/account", include_in_schema=False)
+async def account_page(request: Request):
     return templates.TemplateResponse(
-        request ,
+        request,
         "account.html",
-        {"title" : "Account"}
+        {"title": "Account"}
     )
 
-# ==============================================================================
-# Exception Handlers
-# ==============================================================================
 
-# Exception Handler - Handle HTTP exceptions returning JSON for API or HTML for web pages
 @app.exception_handler(StarletteHTTPException)
 async def general_http_exception_handler(request: Request, exception: StarletteHTTPException):
     if request.url.path.startswith("/api"):
@@ -140,7 +177,6 @@ async def general_http_exception_handler(request: Request, exception: StarletteH
     )
 
 
-# Exception Handler - Handle request validation errors returning JSON for API or HTML for web pages
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exception: RequestValidationError):
     if request.url.path.startswith("/api"):

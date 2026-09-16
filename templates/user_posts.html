@@ -1,21 +1,21 @@
-{% extends "layout.html" %} {% block content %}
+{% extends "layout.html" %}
+{% block content %}
+    <h1 class="mb-4">Posts by {{ user.username }}</h1>
     <div id="postsContainer">
         {% for post in posts %}
             <article class="content-section py-3 px-4 mb-4">
                 <div class="d-flex align-items-start gap-4">
-                    <img
-                            class="rounded-circle article-img flex-shrink-0"
-                            src="{{ post.author.image_path }}"
-                            alt="{{ post.author.username }}'s profile picture"
-                            width="64"
-                            height="64"
-                            loading="lazy"
-                    />
+                    <img class="rounded-circle article-img flex-shrink-0"
+                         src="{{ post.author.image_path }}"
+                         alt="{{ post.author.username }}'s profile picture"
+                         width="64"
+                         height="64"
+                         loading="lazy">
                     <div class="flex-grow-1">
                         <div class="article-metadata mb-2">
                             <a class="me-2"
                                href="{{ url_for('user_posts', user_id=post.author.id) }}">{{ post.author.username }}</a>
-                            <small class="text-body-secondary">{{ post.date_posted.strftime('%B %d, %Y') }}</small>
+                            <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d, %Y") }}</small>
                         </div>
                         <h2>
                             <a class="article-title"
@@ -25,6 +25,8 @@
                     </div>
                 </div>
             </article>
+        {% else %}
+            <p class="text-body-secondary">No posts by this user yet.</p>
         {% endfor %}
     </div>
 
@@ -33,15 +35,14 @@
             <button type="button" class="btn btn-outline-primary" id="loadMoreBtn">Load More Posts</button>
         </div>
     {% endif %}
-
 {% endblock content %}
-
 
 {% block scripts %}
     <script type="module">
         import {escapeHtml, formatDate} from '/static/js/utils.js';
 
-        let currentOffset = {{ limit }};  // Start after server-rendered posts
+        const userId = {{ user.id }};
+        let currentOffset = {{ limit }};
         const limit = {{ limit }};
         let hasMore = {{ 'true' if has_more else 'false' }};
 
@@ -75,7 +76,7 @@
             let errorOccurred = false;
 
             try {
-                const response = await fetch(`/api/posts?skip=${currentOffset}&limit=${limit}`);
+                const response = await fetch(`/api/users/${userId}/posts?skip=${currentOffset}&limit=${limit}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch posts');
