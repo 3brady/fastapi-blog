@@ -1,14 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import select, func
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
-from database import get_db
-from schemas import PostCreate, PostResponse, PostUpdate, PaginatedPostsResponse
 from auth import CurrentUser
+from database import get_db
+from schemas import PaginatedPostsResponse, PostCreate, PostResponse, PostUpdate
 
 router = APIRouter()
 
@@ -17,8 +17,8 @@ router = APIRouter()
 @router.get("", response_model=PaginatedPostsResponse)
 async def get_posts(
     db: Annotated[AsyncSession, Depends(get_db)],
-    skip: Annotated[int , Query(ge=0)] = 0 ,
-    limit : Annotated[int , Query(ge=1 , le=100)] = 10,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
 ):
     count_result = await db.execute(select(func.count()).select_from(models.Post))
     total = count_result.scalar() or 0
@@ -35,11 +35,11 @@ async def get_posts(
     has_more = skip + len(posts) < total
 
     return PaginatedPostsResponse(
-        posts = [PostResponse.model_validate(post) for post in posts],
-        total = total,
+        posts=[PostResponse.model_validate(post) for post in posts],
+        total=total,
         skip=skip,
         limit=limit,
-        has_more = has_more
+        has_more=has_more,
     )
 
 
@@ -47,7 +47,8 @@ async def get_posts(
 @router.get("/{post_id}", response_model=PostResponse)
 async def get_post(post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
-        select(models.Post).options(selectinload(models.Post.author)).where(models.Post.id == post_id))
+        select(models.Post).options(selectinload(models.Post.author)).where(models.Post.id == post_id)
+    )
     post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
@@ -71,8 +72,12 @@ async def create_post(post: PostCreate, current_user: CurrentUser, db: Annotated
 
 # API PUT - Fully update an existing post by ID
 @router.put("/{post_id}", response_model=PostResponse)
-async def update_post_full(post_id: int, current_user: CurrentUser, post_data: PostCreate,
-                           db: Annotated[AsyncSession, Depends(get_db)], ):
+async def update_post_full(
+    post_id: int,
+    current_user: CurrentUser,
+    post_data: PostCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
     result = await db.execute(select(models.Post).where(models.Post.id == post_id))
     post = result.scalars().first()
     if not post:
@@ -91,8 +96,9 @@ async def update_post_full(post_id: int, current_user: CurrentUser, post_data: P
 
 # API PATCH - Partially update an existing post by ID
 @router.patch("/{post_id}", response_model=PostResponse)
-async def update_post_partial(post_id: int, current_user: CurrentUser, post_data: PostUpdate,
-                              db: Annotated[AsyncSession, Depends(get_db)]):
+async def update_post_partial(
+    post_id: int, current_user: CurrentUser, post_data: PostUpdate, db: Annotated[AsyncSession, Depends(get_db)]
+):
     result = await db.execute(select(models.Post).where(models.Post.id == post_id))
     post = result.scalars().first()
     if not post:

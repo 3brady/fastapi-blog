@@ -1,5 +1,6 @@
 from pydantic import SecretStr
-from pydantic_settings import BaseSettings , SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -7,25 +8,26 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    database_url : str
+    database_url: str
 
-    secret_key : SecretStr
-    algorithm : str = "HS256"
-    access_token_expire_minutes : int = 30
+    secret_key: SecretStr
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
 
-    max_upload_size_bytes : int = 5 * 1024 * 1024 # 5 MB
+    max_upload_size_bytes: int = 5 * 1024 * 1024  # 5 MB
 
-    posts_per_page : int = 10
+    posts_per_page: int = 10
 
-    reset_token_expire_minutes : int = 60 #minutes
+    reset_token_expire_minutes: int = 60  # minutes
 
-    mail_server : str = "localhost"
-    mail_port : int = 587
-    mail_username : str = ""
-    mail_password : SecretStr = SecretStr("")
-    mail_from : str = "noreply@example.com"
+    mail_server: str = "localhost"
+    mail_port: int = 587
+    mail_username: str = ""
+    mail_password: SecretStr = SecretStr("")
+    mail_from: str = "noreply@example.com"
     mail_use_tls: bool = True
 
-    frontend_url : str = "http://localhost:8000"
+    frontend_url: str = "http://localhost:8000"
 
-settings = Settings()  #type: ignore[call-args]  # Loaded from .env file
+
+settings = Settings()  # type: ignore[call-args]  # Loaded from .env file

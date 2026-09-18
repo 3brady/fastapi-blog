@@ -51,6 +51,13 @@
                        id="pictureInput"
                        accept="image/*">
                 <button type="button" class="btn btn-primary" id="uploadPictureBtn" disabled>Upload</button>
+                <button type="button"
+                        class="btn btn-outline-danger"
+                        id="deletePictureBtn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deletePhotoModal"
+                        disabled>Delete Photo
+                </button>
             </div>
             <small class="text-body-secondary">Maximum file size: 5MB. Supported formats: JPEG, PNG, GIF, WebP.</small>
         </div>
@@ -136,6 +143,36 @@
             </div>
         </div>
     </div>
+    <div class="modal fade"
+         id="deletePhotoModal"
+         tabindex="-1"
+         aria-labelledby="deletePhotoModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deletePhotoModalLabel">Delete Photo?</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="fs-5">
+                        Are you sure you want to delete your profile picture? Your account and posts will not be
+                        affected.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeletePhoto">Delete Photo</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock content %}
 {% block scripts %}
     <script type="module">
@@ -160,11 +197,13 @@
 
             document.getElementById('username').value = user.username;
             document.getElementById('email').value = user.email;
+            deletePictureBtn.disabled = !user.image_file;
         }
 
         const pictureInput = document.getElementById('pictureInput');
         const imagePreview = document.getElementById('imagePreview');
         const uploadBtn = document.getElementById('uploadPictureBtn');
+        const deletePictureBtn = document.getElementById('deletePictureBtn');
 
         pictureInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -247,6 +286,64 @@
             } finally {
                 uploadBtn.disabled = pictureInput.files.length === 0;
                 uploadBtn.textContent = 'Upload';
+            }
+        });
+
+        document.getElementById('confirmDeletePhoto').addEventListener('click', async () => {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${currentUserId}/picture`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (response.status === 403) {
+                    document.getElementById('errorMessage').textContent =
+                        'You are not authorized to update this profile picture.';
+                    hideModal('deletePhotoModal');
+                    showModal('errorModal');
+                    return;
+                }
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    clearUserCache();
+
+                    document.getElementById('profileImage').src = data.image_path;
+
+                    pictureInput.value = '';
+                    imagePreview.classList.add('d-none');
+
+                    deletePictureBtn.disabled = true;
+
+                    document.getElementById('successMessage').textContent =
+                        'Profile picture deleted successfully!';
+                    hideModal('deletePhotoModal');
+                    showModal('successModal');
+                } else {
+                    const error = await response.json();
+                    document.getElementById('errorMessage').textContent = getErrorMessage(error);
+                    hideModal('deletePhotoModal');
+                    showModal('errorModal');
+                }
+            } catch (error) {
+                document.getElementById('errorMessage').textContent =
+                    'Network error. Please check your connection and try again.';
+                hideModal('deletePhotoModal');
+                showModal('errorModal');
             }
         });
 
