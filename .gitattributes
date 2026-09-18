@@ -1,0 +1,6 @@
+# Jinja2 templates are rendered by Python; count them as Python in
+# GitHub's language stats instead of stale HTML.
+templates/** linguist-language=Python
+
+# OPTIONAL: fold frontend JS into Python too (remove comment to enable)
+# static/js/** linguist-language=Python
