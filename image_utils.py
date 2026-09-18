@@ -11,7 +11,7 @@ def process_profile_image(content : bytes) -> str :
         img = ImageOps.exif_transpose(original)
         img = ImageOps.fit(img , (300 , 300) , method=Image.Resampling.LANCZOS)
 
-        if img.mode in ("RGBA" , "LA" , "p" ):
+        if img.mode in ("RGBA" , "LA" , "P" ):
             img = img.convert("RGB")
 
         filename = f"{uuid.uuid4().hex}.jpg"
