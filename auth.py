@@ -77,7 +77,7 @@ async def get_current_user(
 
     try:
         user_id_int = int(user_id)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
