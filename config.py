@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     database_url: str
@@ -20,12 +21,8 @@ class Settings(BaseSettings):
 
     reset_token_expire_minutes: int = 60  # minutes
 
-    mail_server: str = "localhost"
-    mail_port: int = 587
-    mail_username: str = ""
-    mail_password: SecretStr = SecretStr("")
-    mail_from: str = "noreply@example.com"
-    mail_use_tls: bool = True
+    resend_api_key: SecretStr = SecretStr("")
+    resend_from: str = "onboarding@resend.dev"
 
     frontend_url: str = "http://localhost:8000"
 
