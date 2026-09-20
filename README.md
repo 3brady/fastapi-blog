@@ -41,6 +41,7 @@
 - **Security** — argon2 password hashing, JWT with required `exp`/`sub`, hashed tokens, hardened HTTP headers, HTML/JSON-aware error handlers, client-side output escaping
 - **Theme** — Bootstrap light/dark/auto toggle persisted in `localStorage`
 - **Observability** — `/health` endpoint reporting database availability
+- **API docs** — auto-generated, interactive Swagger UI at `/docs` and ReDoc at `/redoc`
 
 ## Disabled in Production
 
@@ -278,4 +279,4 @@ new behavior.
 
 ## License
 
-No license is specified for this repository.
+This project is licensed under the [MIT License](LICENSE).
